@@ -24,15 +24,15 @@ func init() {
 }
 
 type Product struct {
-	Id          int        `db:"id" json:"id"`
-	Uuid        string     `db:"uuid" json:"uuid"`
-	Name        string     `db:"name" json:"name" form:"name"`
-	Description string     `db:"description" json:"description" form:"description"`
-	Price       int        `db:"price" json:"price" form:"price"`
-	Category    string     `db:"category" json:"category" form:"category"`
-	Image       *string    `db:"image,omitempty" json:"image,omitempty" form:"image,omitempty"`
-	CreatedAt   *time.Time `db:"createdAt" json:"createdAt"`
-	UpdatedAt   *time.Time `db:"updatedAt" json:"updatedAt,omitempty"`
+	Id          int        `db:"id" json:"id" valid:"-"`
+	Uuid        string     `db:"uuid" json:"uuid" valid:"-"`
+	Name        string     `db:"name" json:"name" form:"name" valid:"stringlength(4|256)~Product Name minimal 4 karakter"`
+	Description string     `db:"description" json:"description" form:"description" valid:"-"`
+	Price       int        `db:"price" json:"price" form:"price" valid:"int"`
+	Category    string     `db:"category" json:"category" form:"category" valid:"in(coffee|food|non-coffee)"`
+	Image       *string    `db:"image,omitempty" json:"image,omitempty" form:"image,omitempty" valid:"-"`
+	CreatedAt   *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
+	UpdatedAt   *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
 }
 
 type Products []Product

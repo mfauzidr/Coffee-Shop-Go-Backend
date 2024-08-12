@@ -31,21 +31,21 @@ func init() {
 }
 
 type Users struct {
-	Id              int        `db:"id" json:"id,omitempty"`
-	UsersUuid       string     `db:"uuid" json:"uuid"`
-	FirstName       string     `db:"firstName" json:"firstName" form:"firstName"`
-	LastName        *string    `db:"lastName" json:"lastName" form:"lastName"`
-	Gender          *string    `db:"gender" json:"gender" form:"gender"`
-	Email           string     `db:"email" json:"email" form:"email"`
-	Password        string     `db:"password" json:"password,omitempty" form:"password"`
-	Image           *string    `db:"image" json:"image" form:"image"`
-	Address         *string    `db:"address" json:"address" form:"address"`
-	PhoneNumber     *string    `db:"phoneNumber" json:"phoneNumber" form:"phoneNumber"`
-	Birthday        *string    `db:"birthday" json:"birthday" form:"birthday"`
-	DeliveryAddress *string    `db:"deliveryAddress" json:"deliveryAddress" form:"deliveryAddress"`
-	Role            string     `db:"role" json:"role" form:"role"`
-	CreatedAt       *time.Time `db:"createdAt" json:"createdAt"`
-	UpdatedAt       *time.Time `db:"updatedAt" json:"updatedAt,omitempty"`
+	Id              int        `db:"id" json:"id,omitempty" valid:"-"`
+	UsersUuid       string     `db:"uuid" json:"uuid" valid:"-"`
+	FirstName       string     `db:"firstName" json:"firstName" form:"firstName" valid:"stringlength(2|256)~First Name minimal 2 karakter"`
+	LastName        *string    `db:"lastName" json:"lastName" form:"lastName" valid:"stringlength(2|256)~Last Name minimal 2 karakter"`
+	Gender          *string    `db:"gender" json:"gender" form:"gender" valid:"type(string)"`
+	Email           string     `db:"email" json:"email" form:"email" valid:"email"`
+	Password        string     `db:"password" json:"password,omitempty" form:"password" valid:"stringlength(6|256)~Password minimal 6 karakter"`
+	Image           *string    `db:"image" json:"image" form:"image" valid:"-"`
+	Address         *string    `db:"address" json:"address" form:"address" valid:"-"`
+	PhoneNumber     *string    `db:"phoneNumber" json:"phoneNumber" form:"phoneNumber" valid:"numeric,optional"`
+	Birthday        *string    `db:"birthday" json:"birthday" form:"birthday" valid:"-"`
+	DeliveryAddress *string    `db:"deliveryAddress" json:"deliveryAddress" form:"deliveryAddress" valid:"-"`
+	Role            string     `db:"role" json:"role" form:"role" valid:"in(customer|admin|staff)"`
+	CreatedAt       *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
+	UpdatedAt       *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
 }
 
 type UsersRes []Users

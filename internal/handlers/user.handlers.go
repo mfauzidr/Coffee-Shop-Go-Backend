@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/models"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
 	"github.com/mfauzidr/coffeeshop-go-backend/pkg"
@@ -28,6 +29,12 @@ func (h *UserHandler) InsertUsers(ctx *gin.Context) {
 
 	if err := ctx.ShouldBind(&users); err != nil {
 		response.BadRequest("Create user failed, invalid input", err.Error())
+		return
+	}
+
+	_, err := govalidator.ValidateStruct(&users)
+	if err != nil {
+		response.BadRequest("create data failed", err.Error())
 		return
 	}
 
@@ -115,6 +122,12 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 
 	if err := ctx.ShouldBind(&input); err != nil {
 		response.BadRequest("Update user failed, invalid input", err.Error())
+		return
+	}
+
+	_, err := govalidator.ValidateStruct(&input)
+	if err != nil {
+		response.BadRequest("Update user failed", err.Error())
 		return
 	}
 

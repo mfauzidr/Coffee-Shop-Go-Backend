@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/models"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
 	"github.com/mfauzidr/coffeeshop-go-backend/pkg"
@@ -29,6 +30,12 @@ func (h *HandlerProduct) InsertProducts(ctx *gin.Context) {
 
 	if err := ctx.ShouldBind(&products); err != nil {
 		response.BadRequest("Create product failed, invalid input", err.Error())
+		return
+	}
+
+	_, err := govalidator.ValidateStruct(&products)
+	if err != nil {
+		response.BadRequest("Create data failed", err.Error())
 		return
 	}
 
@@ -123,6 +130,12 @@ func (h *HandlerProduct) ProductsUpdate(ctx *gin.Context) {
 
 	if err := ctx.ShouldBind(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := govalidator.ValidateStruct(&input)
+	if err != nil {
+		response.BadRequest("Create data failed", err.Error())
 		return
 	}
 
