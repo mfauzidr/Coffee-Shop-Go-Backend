@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/models"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
@@ -18,139 +21,227 @@ func NewProduct(r *repository.RepoProduct) *HandlerProduct {
 	return &HandlerProduct{r}
 }
 
-func (h *HandlerProduct) PostProduct(ctx *gin.Context) {
-	product := models.Product{}
+func (h *HandlerProduct) InsertProducts(ctx *gin.Context) {
+	products := models.Product{}
 
-	if err := ctx.ShouldBind(&product); err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
+	if err := ctx.ShouldBind(&products); err != nil {
+		response := models.Response{
+			Status:  "error",
+			Message: "invalid input",
+			Error:   err.Error(),
+		}
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
 		return
 	}
 
-	if err := h.CreateProduct(&product); err != nil {
-		ctx.AbortWithError(http.StatusBadRequest, err)
-		return
+	productData := map[string]interface{}{
+		"name":        products.Name,
+		"description": products.Description,
+		"price":       products.Price,
+		"category":    products.Category,
+		"image":       products.Image,
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Product created successfully"})
+	results, err := h.CreateProduct(productData)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			if strings.Contains(err.Error(), "unique_name") {
+				response := models.Response{
+					Status:  "error",
+					Message: "Products already exists",
+				}
+				ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
+				return
+			}
+		}
+		response := models.Response{
+			Status:  "error",
+			Message: "Internal Server Error",
+			Error:   err.Error(),
+		}
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
+		return
+	}
+	response := models.Response{
+		Status:  "success",
+		Message: "Product created successfully",
+		Data:    results,
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (h *HandlerProduct) GetProducts(ctx *gin.Context) {
-	productName := ctx.Query("name")
-	minPriceStr := ctx.Query("minPrice")
-	maxPriceStr := ctx.Query("maxPrice")
-	category := ctx.Query("category")
-	sort := ctx.Query("sort")
-	pageStr := ctx.Query("page")
+	pageStr := ctx.DefaultQuery("page", "1")
+	limitStr := ctx.DefaultQuery("limit", "6")
 
-	var minPrice, maxPrice, page int
-	var err error
-
-	if minPriceStr != "" {
-		minPrice, err = strconv.Atoi(minPriceStr)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid minPrice"})
-			return
-		}
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		ctx.JSON(http.StatusBadRequest, models.Response{
+			Status:  "error",
+			Message: "Invalid or missing 'page' parameter",
+		})
+		return
 	}
 
-	if maxPriceStr != "" {
-		maxPrice, err = strconv.Atoi(maxPriceStr)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid maxPrice"})
-			return
-		}
-	}
-
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
-			return
-		}
-	} else {
-		page = 1
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		ctx.JSON(http.StatusBadRequest, models.Response{
+			Status:  "error",
+			Message: "Invalid or missing 'limit' parameter",
+		})
+		return
 	}
 
 	query := models.ProductQuery{
-		Name:     productName,
-		MinPrice: minPrice,
-		MaxPrice: maxPrice,
-		Category: category,
-		Sort:     sort,
-		Page:     page,
+		Page:  page,
+		Limit: limit,
 	}
 
-	data, err := h.GetAllProduct(&query)
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.Response{
+			Status:  "error",
+			Message: "Invalid query parameters",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	data, total, err := h.GetAllProduct(&query)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, models.Response{
+			Status:  "error",
+			Message: "Failed to get products",
+			Error:   err.Error(),
+		})
 		return
 	}
 
 	if len(*data) == 0 {
-		ctx.JSON(http.StatusNotFound, gin.H{"message": "No products found"})
+		ctx.JSON(http.StatusNotFound, models.Response{
+			Status:  "success",
+			Message: "No products found",
+			Data:    []interface{}{},
+		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, data)
+	totalPages := (total + query.Limit - 1) / query.Limit
+	meta := &models.Meta{
+		Total:     total,
+		TotalPage: totalPages,
+		Page:      query.Page,
+		NextPage:  query.Page + 1,
+		PrevPage:  query.Page - 1,
+	}
+
+	ctx.JSON(http.StatusOK, models.Response{
+		Status:  "success",
+		Message: "Products retrieved successfully",
+		Meta:    meta,
+		Data:    data,
+	})
 }
 
-func (h *HandlerProduct) GetProductDetail(ctx *gin.Context) {
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
+func (h *HandlerProduct) GetProductsDetail(ctx *gin.Context) {
+	uuid := ctx.Param("uuid")
+
+	data, err := h.GetDetailProduct(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+		ctx.JSON(http.StatusNotFound, models.Response{
+			Status:  "error",
+			Message: "Product not found",
+			Error:   err.Error(),
+		})
 		return
 	}
 
-	data, err := h.GetDetailProduct(id)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching product details"})
-		return
-	}
-
-	if data == nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, data)
+	ctx.JSON(http.StatusOK, models.Response{
+		Status:  "success",
+		Message: "Product details retrieved successfully",
+		Data:    data,
+	})
 }
 
-func (h *HandlerProduct) ProductDelete(ctx *gin.Context) {
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
-		return
-	}
+func (h *HandlerProduct) ProductsUpdate(ctx *gin.Context) {
+	var input models.Product
 
-	if err := h.DeleteProduct(id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
-}
-
-func (h *HandlerProduct) ProductUpdate(ctx *gin.Context) {
-	var product models.Product
-	if err := ctx.ShouldBind(&product); err != nil {
+	if err := ctx.ShouldBind(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+	data := make(map[string]interface{})
+	val := reflect.ValueOf(input)
+	typ := val.Type()
+
+	for i := 0; i < val.NumField(); i++ {
+		fieldValue := val.Field(i)
+		fieldType := typ.Field(i)
+
+		dbTag := fieldType.Tag.Get("db")
+		if dbTag == "" {
+			dbTag = strings.ToLower(fieldType.Name)
+		}
+		if dbTag == "id" {
+			continue
+		}
+
+		if (fieldValue.Kind() == reflect.Ptr && !fieldValue.IsNil()) ||
+			(fieldValue.Kind() != reflect.Ptr && fieldValue.Interface() != "") {
+			data[dbTag] = fieldValue.Interface()
+		}
+	}
+
+	uuid := ctx.Param("uuid")
+	if uuid == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ProductUuid is required"})
 		return
 	}
 
-	updatedProduct, err := h.UpdateProduct(&product, id)
+	fmt.Println(data)
+
+	upatedProduct, err := h.UpdateProduct(uuid, data)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, models.Response{
+			Status:  "error",
+			Message: "Failed to update",
+			Error:   err.Error(),
+		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, updatedProduct)
+	ctx.JSON(http.StatusOK, models.Response{
+		Status:  "success",
+		Message: "Product updated successfully",
+		Data:    upatedProduct,
+	})
+}
+
+func (h *HandlerProduct) ProductsDelete(ctx *gin.Context) {
+	uuid := ctx.Param("uuid")
+
+	data, err := h.DeleteProduct(uuid)
+	if err != nil {
+		if err.Error() == fmt.Sprintf("product with UUID %s not found", uuid) {
+			ctx.JSON(http.StatusNotFound, models.Response{
+				Status:  "error",
+				Message: "product not found",
+				Error:   err.Error(),
+			})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, models.Response{
+			Status:  "error",
+			Message: "Failed to delete product",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.Response{
+		Status:  "success",
+		Message: "product deleted successfully",
+		Data:    data,
+	})
 }

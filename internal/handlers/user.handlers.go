@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	// "strconv"
-
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/models"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
 
@@ -192,6 +190,9 @@ func (h *HandlerUsers) UsersUpdate(ctx *gin.Context) {
 		if dbTag == "" {
 			dbTag = strings.ToLower(fieldType.Name)
 		}
+		if dbTag == "id" {
+			continue
+		}
 
 		if (fieldValue.Kind() == reflect.Ptr && !fieldValue.IsNil()) ||
 			(fieldValue.Kind() != reflect.Ptr && fieldValue.Interface() != "") {
@@ -201,7 +202,7 @@ func (h *HandlerUsers) UsersUpdate(ctx *gin.Context) {
 
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UUID is required"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UserUuid is required"})
 		return
 	}
 
@@ -229,9 +230,17 @@ func (h *HandlerUsers) UsersDelete(ctx *gin.Context) {
 
 	data, err := h.DeleteUser(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Response{
+		if err.Error() == fmt.Sprintf("user with UUID %s not found", uuid) {
+			ctx.JSON(http.StatusNotFound, models.Response{
+				Status:  "error",
+				Message: "User not found",
+				Error:   err.Error(),
+			})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, models.Response{
 			Status:  "error",
-			Message: "Failed to Delete. User not found",
+			Message: "Failed to delete user",
 			Error:   err.Error(),
 		})
 		return

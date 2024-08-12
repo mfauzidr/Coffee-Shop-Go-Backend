@@ -18,16 +18,24 @@ func NewFavorite(db *sqlx.DB) *RepoFavorite {
 }
 
 func (r *RepoFavorite) CreateFavorite(data *models.PostFavorite) error {
-	query := `INSERT INTO public.favorite(product_id) VALUES(:product_id)`
+	query := `INSERT INTO public.favorite("userId", "productId") VALUES(:userId, :productId)`
 
 	_, err := r.NamedExec(query, data)
 	return err
 }
 
 func (r *RepoFavorite) GetAllFavorite() (*models.Favorites, error) {
-	query := `SELECT f.favorite_id, p.name, p.price, p.category, p.description, f.created_at, f.updated_at FROM public.favorite f
-	join public.product p on f.product_id = p.product_id
-	order by f.created_at DESC`
+	query := `SELECT 
+							"f"."id", 
+							"u"."firstName" || ' ' || COALESCE("u"."lastName", '') AS "userName",
+							"p"."name" AS "productName", 
+							"p"."price", 
+							"p"."category",
+							"f"."createdAt", 
+							"f"."updatedAt" FROM public.favorite "f"
+						JOIN public.users "u" ON "f"."userId" = "u"."id"
+						JOIN public.products "p" ON "f"."productId" = "p"."id"
+						ORDER BY "f"."createdAt" DESC`
 	data := models.Favorites{}
 
 	if err := r.Select(&data, query); err != nil {
@@ -38,13 +46,22 @@ func (r *RepoFavorite) GetAllFavorite() (*models.Favorites, error) {
 }
 
 func (r *RepoFavorite) GetDetailFavorite(id int) (*models.Favorite, error) {
-	query := `SELECT f.favorite_id, p.name, p.price, p.category, p.description FROM public.favorite f
-	join public.product p on f.product_id = p.product_id
-	WHERE f.favorite_id = :favorite_id`
+	query := `SELECT 
+							"f"."id", 
+							"u"."firstName" || ' ' || COALESCE("u"."lastName", '') AS "userName",
+							"p"."name" AS "productName", 
+							"p"."price", 
+							"p"."category", 
+							"p"."description", 
+							"f"."createdAt", 
+							"f"."updatedAt" FROM public.favorite "f"
+						JOIN public.users "u" ON "f"."userId" = "u"."id"
+						JOIN public.products "p" ON "f"."productId" = "p"."id"
+						WHERE "f"."id" = :id`
 	data := models.Favorite{}
 
 	rows, err := r.DB.NamedQuery(query, map[string]interface{}{
-		"favorite_id": id,
+		"id": id,
 	})
 	if err != nil {
 		return nil, err
@@ -63,10 +80,10 @@ func (r *RepoFavorite) GetDetailFavorite(id int) (*models.Favorite, error) {
 }
 
 func (r *RepoFavorite) DeleteFavorite(id int) error {
-	query := `DELETE FROM public.favorite WHERE favorite_id = :favorite_id`
+	query := `DELETE FROM public.favorite WHERE id = :id`
 
 	_, err := r.DB.NamedExec(query, map[string]interface{}{
-		"favorite_id": id,
+		"id": id,
 	})
 	return err
 }
@@ -74,11 +91,14 @@ func (r *RepoFavorite) DeleteFavorite(id int) error {
 func (r *RepoFavorite) UpdateFavorite(data *models.UpdateFavorite) (*models.UpdateFavorite, error) {
 	query := `
 		UPDATE public.favorite 
-		SET product_id = :product_id, updated_at = now() 
-		WHERE favorite_id = :favorite_id
+		SET "productId" = :productId, "updatedAt" = now() 
+		WHERE id = :id
 		RETURNING *
 	`
-	rows, err := r.DB.NamedQuery(query, data)
+	rows, err := r.DB.NamedQuery(query, map[string]interface{}{
+		"productId": data.ProductId,
+		"id":        data.Id,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("query execution error: %w", err)
 	}

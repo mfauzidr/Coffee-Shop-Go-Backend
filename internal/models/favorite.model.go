@@ -3,14 +3,15 @@ package models
 import "time"
 
 var schemaFavorite = `
-create table public.favorite (
-	favorite_id serial,
-	favorite_uuid uuid unique default gen_random_uuid(),
-	product_id int,
-	created_at timestamp without time zone default now(),
-	updated_at timestamp without time zone,
-	constraint favorite_pk primary key(favorite_id),
-	constraint product_fk foreign key (product_id) references public.product(product_id) on delete set null
+CREATE TABLE public.favorite (
+	id serial4 NOT NULL,
+	"userId" int4 NULL,
+	"productId" int4 NULL,
+	"createdAt" timestamp NULL DEFAULT now(),
+	"updatedAt" timestamp NULL,
+	CONSTRAINT favorite_pkey PRIMARY KEY (id),
+	CONSTRAINT "favorite_productId_fkey" FOREIGN KEY ("productId") REFERENCES public.products(id) ON DELETE SET NULL,
+	CONSTRAINT "favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES public.users(id) ON DELETE SET NULL
 );
 `
 
@@ -19,28 +20,29 @@ func init() {
 }
 
 type Favorite struct {
-	Favorite_id   int        `db:"favorite_id" json:"favorite_id"`
-	Favorite_uuid string     `db:"favorite_uuid" json:"favorite_uuid"`
-	Name          string     `db:"name" json:"name"`
-	Price         int        `db:"price" json:"price"`
-	Category      string     `db:"category" json:"category"`
-	Description   string     `db:"description" json:"description"`
-	CreatedAt     *time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     *time.Time `db:"updated_at" json:"updated_at"`
+	Id          int        `db:"id" json:"id"`
+	UserName    *string    `db:"userName" json:"userName,omitempty"`
+	ProductName string     `db:"productName" json:"productName"`
+	Price       int        `db:"price" json:"price"`
+	Category    string     `db:"category" json:"category"`
+	Description *string    `db:"description" json:"description,omitempty"`
+	CreatedAt   *time.Time `db:"createdAt" json:"createdAt"`
+	UpdatedAt   *time.Time `db:"updatedAt" json:"updatedAt"`
 }
 
 type PostFavorite struct {
-	ID        int        `db:"product_id" json:"product_id"`
-	CreatedAt *time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt *time.Time `db:"updated_at" json:"updated_at"`
+	UserId    int        `db:"userId" json:"userId" form:"userId"`
+	ProductId int        `db:"productId" json:"productId" form:"productId"`
+	CreatedAt *time.Time `db:"createdAt" json:"createdAt"`
+	UpdatedAt *time.Time `db:"updatedAt" json:"updatedAt"`
 }
 
 type Favorites []Favorite
 
 type UpdateFavorite struct {
-	Favorite_id   int        `db:"favorite_id" json:"favorite_id"`
-	Favorite_uuid string     `db:"favorite_uuid" json:"favorite_uuid"`
-	ID            int        `db:"product_id" json:"product_id"`
-	CreatedAt     *time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt     *time.Time `db:"updated_at" json:"updated_at"`
+	Id        int        `db:"id" json:"id"`
+	UserId    *int       `db:"userId" json:"userId"`
+	ProductId int        `db:"productId" json:"productId" form:"productId"`
+	CreatedAt *time.Time `db:"createdAt" json:"createdAt"`
+	UpdatedAt *time.Time `db:"updatedAt" json:"updatedAt"`
 }

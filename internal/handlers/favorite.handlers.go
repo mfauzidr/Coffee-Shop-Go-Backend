@@ -53,13 +53,13 @@ func (h *HandlerFavorite) GetFavoriteDetail(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid favorite ID"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid favorite Id"})
 		return
 	}
 
 	data, err := h.GetDetailFavorite(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching favorite details"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *HandlerFavorite) FavoriteDelete(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid favorite ID"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid favorite Id"})
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h *HandlerFavorite) PatchFavorite(ctx *gin.Context) {
 		return
 	}
 
-	favorite.Favorite_id = id
+	favorite.Id = id
 
 	data, err := h.UpdateFavorite(&favorite)
 	if err != nil {

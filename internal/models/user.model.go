@@ -38,7 +38,7 @@ type Users struct {
 	Gender          *string    `db:"gender" json:"gender" form:"gender"`
 	Email           string     `db:"email" json:"email" form:"email"`
 	Password        string     `db:"password" json:"password,omitempty" form:"password"`
-	Image           *string    `db:"image" json:"image"`
+	Image           *string    `db:"image" json:"image" form:"image"`
 	Address         *string    `db:"address" json:"address" form:"address"`
 	PhoneNumber     *string    `db:"phoneNumber" json:"phoneNumber" form:"phoneNumber"`
 	Birthday        *string    `db:"birthday" json:"birthday" form:"birthday"`
