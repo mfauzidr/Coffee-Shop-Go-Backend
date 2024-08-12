@@ -38,6 +38,12 @@ func (h *UserHandler) InsertUsers(ctx *gin.Context) {
 		return
 	}
 
+	users.Password, err = pkg.HashPassword(users.Password)
+	if err != nil {
+		response.BadRequest("Register failed", err.Error())
+		return
+	}
+
 	results, err := h.CreateUser(&users)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
@@ -105,7 +111,20 @@ func (h *UserHandler) GetUsers(ctx *gin.Context) {
 
 func (h *UserHandler) GetUsersDetail(ctx *gin.Context) {
 	response := pkg.NewResponse(ctx)
-	uuid := ctx.Param("uuid")
+
+	role, _ := ctx.Get("userRole")
+	var uuid string
+
+	if role == "customer" {
+		if userUuid, ok := ctx.Get("userUuid"); ok {
+			uuid = userUuid.(string)
+		} else {
+			response.Unauthorized("User UUID not found", nil)
+			return
+		}
+	} else {
+		uuid = ctx.Param("uuid")
+	}
 
 	data, err := h.GetDetailsUser(uuid)
 	if err != nil {
@@ -131,6 +150,12 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 		return
 	}
 
+	input.Password, err = pkg.HashPassword(input.Password)
+	if err != nil {
+		response.BadRequest("Register failed", err.Error())
+		return
+	}
+
 	data := make(map[string]interface{})
 	val := reflect.ValueOf(input)
 	typ := val.Type()
@@ -153,10 +178,18 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 		}
 	}
 
-	uuid := ctx.Param("uuid")
-	if uuid == "" {
-		response.BadRequest("Update user failed, uuid is required", "UUID is Empty")
-		return
+	role, _ := ctx.Get("userRole")
+	var uuid string
+
+	if role == "customer" {
+		if userUuid, ok := ctx.Get("userUuid"); ok {
+			uuid = userUuid.(string)
+		} else {
+			response.Unauthorized("User UUID not found", err)
+			return
+		}
+	} else {
+		uuid = ctx.Param("uuid")
 	}
 
 	updatedUser, err := h.UpdateUser(uuid, data)

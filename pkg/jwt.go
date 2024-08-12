@@ -8,14 +8,16 @@ import (
 )
 
 type claims struct {
+	Id    int    `json:"id"`
 	UUID  string `json:"uuid"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func NewJWT(uuid, email, role string) *claims {
+func NewJWT(uuid, email, role string, id int) *claims {
 	return &claims{
+		Id:    id,
 		UUID:  uuid,
 		Email: email,
 		Role:  role,

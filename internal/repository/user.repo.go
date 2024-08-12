@@ -28,24 +28,37 @@ func NewUserRepository(db *sqlx.DB) *UsersRepo {
 func (r *UsersRepo) CreateUser(data *models.Users) (*models.Users, error) {
 	query := `
         INSERT INTO users (
-    			"firstName", 
+    			"firstName",
+					"lastName", 
     			"email", 
     			"password", 
-    			"role"
+    			"role",
+					"gender"
 				) VALUES (
     			:firstName, 
+					:lastName,
     			:email, 
     			:password, 
-    			:role
+    			:role,
+					:gender
 				)
 				RETURNING *;
     		`
 
 	var result models.Users
-	err := r.DB.QueryRowx(query, data).StructScan(&result)
+	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.StructScan(&result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &result, nil
 }
 

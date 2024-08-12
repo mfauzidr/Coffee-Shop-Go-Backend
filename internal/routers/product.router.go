@@ -2,6 +2,7 @@ package routers
 
 import (
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/handlers"
+	"github.com/mfauzidr/coffeeshop-go-backend/internal/middleware"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,7 @@ func product(g *gin.Engine, d *sqlx.DB) {
 
 	route.GET("/", handler.GetProducts)
 	route.GET("/:uuid", handler.GetProductsDetail)
-	route.POST("/", handler.InsertProducts)
-	route.DELETE("/:uuid", handler.ProductsDelete)
-	route.PATCH("/:uuid", handler.ProductsUpdate)
+	route.POST("/", middleware.AuthMiddleware("admin"), handler.InsertProducts)
+	route.DELETE("/:uuid", middleware.AuthMiddleware("admin"), handler.ProductsDelete)
+	route.PATCH("/:uuid", middleware.AuthMiddleware("admin"), handler.ProductsUpdate)
 }

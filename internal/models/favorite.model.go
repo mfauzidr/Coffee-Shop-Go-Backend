@@ -31,6 +31,7 @@ type Favorite struct {
 }
 
 type PostFavorite struct {
+	Id        int        `db:"id" json:"id"`
 	UserId    int        `db:"userId" json:"userId" form:"userId"`
 	ProductId int        `db:"productId" json:"productId" form:"productId"`
 	CreatedAt *time.Time `db:"createdAt" json:"createdAt"`

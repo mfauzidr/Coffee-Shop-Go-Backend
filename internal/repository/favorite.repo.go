@@ -26,12 +26,20 @@ func NewFavoriteRepository(db *sqlx.DB) *FavoriteRepo {
 }
 
 func (r *FavoriteRepo) CreateFavorite(data *models.PostFavorite) (*models.PostFavorite, error) {
-	query := `INSERT INTO public.favorite("userId", "productId") VALUES(:userId, :productId)`
+	query := `INSERT INTO public.favorite("userId", "productId") VALUES(:userId, :productId) RETURNING *`
 
 	var result models.PostFavorite
-	err := r.DB.QueryRowx(query, data).StructScan(&result)
+	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
 		return nil, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.StructScan(&result)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &result, nil
 }

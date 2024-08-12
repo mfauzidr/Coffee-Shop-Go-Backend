@@ -7,20 +7,20 @@ import (
 var schemaUsers = `
 CREATE TABLE public.users (
 	id serial4 NOT NULL,
-	"firstName" varchar(30) NOT NULL,
-	"lastName" varchar(30) NULL,
-	gender varchar(10) NULL,
-	email varchar(30) NOT NULL,
+	"firstName" varchar(255) NOT NULL,
+	"lastName" varchar(255) NULL,
+	gender varchar(255) NULL,
+	email varchar(255) NOT NULL,
 	"password" varchar(100) NOT NULL,
-	address text NULL,
-	"deliveryAddress" text NULL,
-	image text NULL,
+	address varchar(255) NULL,
+	"deliveryAddress" varchar(255) NULL,
+	image varchar(255) NULL,
 	"phoneNumber" varchar(15) NULL,
 	"role" varchar(20) NULL,
 	"createdAt" timestamp NULL DEFAULT now(),
 	"updatedAt" timestamp NULL,
-	"uuid" uuid NULL DEFAULT uuid_generate_v4(),
-	birthday date NULL,
+	uuid uuid NULL DEFAULT uuid_generate_v4(),
+	birthday date NULL DEFAULT '1990-01-01'::date,
 	CONSTRAINT users_email_key UNIQUE (email),
 	CONSTRAINT users_pkey PRIMARY KEY (id)
 );
@@ -33,7 +33,7 @@ func init() {
 type Users struct {
 	Id              int        `db:"id" json:"id,omitempty" valid:"-"`
 	UsersUuid       string     `db:"uuid" json:"uuid" valid:"-"`
-	FirstName       string     `db:"firstName" json:"firstName" form:"firstName" valid:"stringlength(2|256)~First Name minimal 2 karakter"`
+	FirstName       *string    `db:"firstName" json:"firstName" form:"firstName" valid:"stringlength(2|256)~First Name minimal 2 karakter"`
 	LastName        *string    `db:"lastName" json:"lastName" form:"lastName" valid:"stringlength(2|256)~Last Name minimal 2 karakter"`
 	Gender          *string    `db:"gender" json:"gender" form:"gender" valid:"type(string)"`
 	Email           string     `db:"email" json:"email" form:"email" valid:"email"`

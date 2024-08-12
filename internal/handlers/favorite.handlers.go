@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -28,6 +29,7 @@ func (h *FavoriteHandler) PostFavorite(ctx *gin.Context) {
 		response.BadRequest("Create failed, invalid input", err.Error())
 		return
 	}
+	fmt.Println(&favorite)
 	results, err := h.CreateFavorite(&favorite)
 	if err != nil {
 		response.InternalServerError("Internal Server Error", err.Error())

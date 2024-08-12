@@ -50,20 +50,27 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	body := models.Users{}
 
 	if err := ctx.ShouldBind(&body); err != nil {
-		response.BadRequest("Login failed, insert email or password", err.Error())
+		response.BadRequest("Login failed, please insert email and password", err.Error())
 		return
 	}
 	_, err := govalidator.ValidateStruct(&body)
 	if err != nil {
-		response.BadRequest("Login failed, email is not valid", err.Error())
+		response.BadRequest("Login failed, invalid email format", err.Error())
 		return
 	}
 
-	result, err := h.GetByEmail(body.Email)
+	results, err := h.GetByEmail(body.Email)
 	if err != nil {
-		response.BadRequest("Login failed, email is not registered", err.Error())
+		response.InternalServerError("Login failed, internal server error", err.Error())
 		return
 	}
+
+	if results == nil || len(*results) == 0 {
+		response.BadRequest("Login failed, email is not registered", "Email not found")
+		return
+	}
+
+	result := (*results)[0]
 
 	err = pkg.VerifyPassword(result.Password, body.Password)
 	if err != nil {
@@ -71,7 +78,7 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	jwt := pkg.NewJWT(result.UsersUuid, result.Email, result.Role)
+	jwt := pkg.NewJWT(result.UsersUuid, result.Email, result.Role, result.Id)
 	token, err := jwt.GenerateToken()
 	if err != nil {
 		response.Unauthorized("Failed generate token", err.Error())
