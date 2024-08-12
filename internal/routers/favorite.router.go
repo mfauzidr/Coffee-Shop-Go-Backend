@@ -11,8 +11,8 @@ import (
 func favorite(g *gin.Engine, d *sqlx.DB) {
 	route := g.Group("/favorite")
 
-	repo := repository.NewFavorite(d)
-	handler := handlers.NewFavorite(repo)
+	var repo repository.FavoriteRepoInterface = repository.NewFavoriteRepository(d)
+	handler := handlers.NewFavoriteRepository(repo)
 
 	route.GET("/", handler.GetFavorites)
 	route.GET("/:id", handler.GetFavoriteDetail)

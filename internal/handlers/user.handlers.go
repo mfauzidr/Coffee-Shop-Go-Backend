@@ -2,101 +2,64 @@ package handlers
 
 import (
 	"fmt"
-	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/models"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
+	"github.com/mfauzidr/coffeeshop-go-backend/pkg"
 
 	"github.com/gin-gonic/gin"
 )
 
-type HandlerUsers struct {
-	*repository.UsersRepo
+type UserHandler struct {
+	repository.UserRepoInterface
 }
 
-func NewUsers(r *repository.UsersRepo) *HandlerUsers {
-	return &HandlerUsers{r}
+func NewUserRepository(r repository.UserRepoInterface) *UserHandler {
+	return &UserHandler{r}
 }
 
-func (h *HandlerUsers) InsertUsers(ctx *gin.Context) {
+func (h *UserHandler) InsertUsers(ctx *gin.Context) {
+	response := pkg.NewResponse(ctx)
 
 	users := models.Users{}
 
 	if err := ctx.ShouldBind(&users); err != nil {
-		response := models.Response{
-			Status:  "error",
-			Message: "invalid input",
-			Error:   err.Error(),
-		}
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
+		response.BadRequest("Create user failed, invalid input", err.Error())
 		return
 	}
 
-	userData := map[string]interface{}{
-		"firstName":       users.FirstName,
-		"lastName":        users.LastName,
-		"phoneNumber":     users.PhoneNumber,
-		"address":         users.Address,
-		"deliveryAddress": users.DeliveryAddress,
-		"image":           users.Image,
-		"birthday":        users.Birthday,
-		"email":           users.Email,
-		"password":        users.Password,
-		"role":            users.Role,
-		"gender":          users.Gender,
-	}
-
-	results, err := h.CreateUser(userData)
+	results, err := h.CreateUser(&users)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			if strings.Contains(err.Error(), "users_email_key") {
-				response := models.Response{
-					Status:  "error",
-					Message: "Email already exists",
-				}
-				ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
+				response.BadRequest("Create user failed, email already exists", err.Error())
 				return
 			}
 		}
-		response := models.Response{
-			Status:  "error",
-			Message: "Internal Server Error",
-			Error:   err.Error(),
-		}
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, response)
+		response.InternalServerError("Internal Server Error", err.Error())
 		return
 	}
-	response := models.Response{
-		Status:  "success",
-		Message: "User created successfully",
-		Data:    results,
-	}
-
-	ctx.JSON(http.StatusOK, response)
+	response.Created("User created successfully", results)
 }
 
-func (h *HandlerUsers) GetUsers(ctx *gin.Context) {
+func (h *UserHandler) GetUsers(ctx *gin.Context) {
+	response := pkg.NewResponse(ctx)
+
 	pageStr := ctx.DefaultQuery("page", "1")
 	limitStr := ctx.DefaultQuery("limit", "6")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Status:  "error",
-			Message: "Invalid or missing 'page' parameter",
-		})
+		response.BadRequest("Invalid or missing 'page' parameter", err.Error())
 		return
 	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Status:  "error",
-			Message: "Invalid or missing 'limit' parameter",
-		})
+		response.BadRequest("Invalid or missing 'limit' parameter", err.Error())
 		return
 	}
 
@@ -106,35 +69,23 @@ func (h *HandlerUsers) GetUsers(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindQuery(&query); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Status:  "error",
-			Message: "Invalid query parameters",
-			Error:   err.Error(),
-		})
+		response.BadRequest("Invalid query parameter", err.Error())
 		return
 	}
 
 	data, total, err := h.GetAllUsers(&query)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Status:  "error",
-			Message: "Failed to get users",
-			Error:   err.Error(),
-		})
+		response.InternalServerError("Internal Server Error", err.Error())
 		return
 	}
 
 	if len(*data) == 0 {
-		ctx.JSON(http.StatusNotFound, models.Response{
-			Status:  "success",
-			Message: "No users found",
-			Data:    []interface{}{},
-		})
+		response.NotFound("User Not Found", "No users available for the given criteria")
 		return
 	}
 
 	totalPages := (total + query.Limit - 1) / query.Limit
-	meta := &models.Meta{
+	meta := &pkg.Meta{
 		Total:     total,
 		TotalPage: totalPages,
 		Page:      query.Page,
@@ -142,39 +93,28 @@ func (h *HandlerUsers) GetUsers(ctx *gin.Context) {
 		PrevPage:  query.Page - 1,
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Status:  "success",
-		Message: "Users retrieved successfully",
-		Meta:    meta,
-		Data:    data,
-	})
+	response.GetAllSuccess("User retrieved successfully", data, meta)
 }
 
-func (h *HandlerUsers) GetUsersDetail(ctx *gin.Context) {
+func (h *UserHandler) GetUsersDetail(ctx *gin.Context) {
+	response := pkg.NewResponse(ctx)
 	uuid := ctx.Param("uuid")
 
 	data, err := h.GetDetailsUser(uuid)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, models.Response{
-			Status:  "error",
-			Message: "User not found",
-			Error:   err.Error(),
-		})
+		response.NotFound("User Not Found", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Status:  "success",
-		Message: "User details retrieved successfully",
-		Data:    data,
-	})
+	response.Success("User details retrieved successfully", data)
 }
 
-func (h *HandlerUsers) UsersUpdate(ctx *gin.Context) {
+func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
+	response := pkg.NewResponse(ctx)
 	var input models.Users
 
 	if err := ctx.ShouldBind(&input); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.BadRequest("Update user failed, invalid input", err.Error())
 		return
 	}
 
@@ -202,53 +142,32 @@ func (h *HandlerUsers) UsersUpdate(ctx *gin.Context) {
 
 	uuid := ctx.Param("uuid")
 	if uuid == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UserUuid is required"})
+		response.BadRequest("Update user failed, uuid is required", "UUID is Empty")
 		return
 	}
-
-	fmt.Println(data)
 
 	updatedUser, err := h.UpdateUser(uuid, data)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Status:  "error",
-			Message: "Failed to update",
-			Error:   err.Error(),
-		})
+		response.BadRequest("Update user failed", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Status:  "success",
-		Message: "User updated successfully",
-		Data:    updatedUser,
-	})
+	response.Success("User updated successfully", updatedUser)
 }
 
-func (h *HandlerUsers) UsersDelete(ctx *gin.Context) {
+func (h *UserHandler) UsersDelete(ctx *gin.Context) {
+	response := pkg.NewResponse(ctx)
 	uuid := ctx.Param("uuid")
 
 	data, err := h.DeleteUser(uuid)
 	if err != nil {
-		if err.Error() == fmt.Sprintf("user with UUID %s not found", uuid) {
-			ctx.JSON(http.StatusNotFound, models.Response{
-				Status:  "error",
-				Message: "User not found",
-				Error:   err.Error(),
-			})
+		if err.Error() == fmt.Sprintf("User with UUID %s not found", uuid) {
+			response.NotFound("User Not Found", err.Error())
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Status:  "error",
-			Message: "Failed to delete user",
-			Error:   err.Error(),
-		})
+		response.InternalServerError("Internal Server Error", err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Status:  "success",
-		Message: "User deleted successfully",
-		Data:    data,
-	})
+	response.Success("User deleted successfully", data)
 }

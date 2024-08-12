@@ -9,22 +9,34 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type RepoFavorite struct {
+type FavoriteRepoInterface interface {
+	CreateFavorite(data *models.PostFavorite) (*models.PostFavorite, error)
+	GetAllFavorite() (*models.Favorites, error)
+	GetDetailFavorite(id int) (*models.Favorite, error)
+	UpdateFavorite(id int, data *models.UpdateFavorite) (*models.UpdateFavorite, error)
+	DeleteFavorite(id int) error
+}
+
+type FavoriteRepo struct {
 	*sqlx.DB
 }
 
-func NewFavorite(db *sqlx.DB) *RepoFavorite {
-	return &RepoFavorite{db}
+func NewFavoriteRepository(db *sqlx.DB) *FavoriteRepo {
+	return &FavoriteRepo{db}
 }
 
-func (r *RepoFavorite) CreateFavorite(data *models.PostFavorite) error {
+func (r *FavoriteRepo) CreateFavorite(data *models.PostFavorite) (*models.PostFavorite, error) {
 	query := `INSERT INTO public.favorite("userId", "productId") VALUES(:userId, :productId)`
 
-	_, err := r.NamedExec(query, data)
-	return err
+	var result models.PostFavorite
+	err := r.DB.QueryRowx(query, data).StructScan(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
-func (r *RepoFavorite) GetAllFavorite() (*models.Favorites, error) {
+func (r *FavoriteRepo) GetAllFavorite() (*models.Favorites, error) {
 	query := `SELECT 
 							"f"."id", 
 							"u"."firstName" || ' ' || COALESCE("u"."lastName", '') AS "userName",
@@ -45,7 +57,7 @@ func (r *RepoFavorite) GetAllFavorite() (*models.Favorites, error) {
 	return &data, nil
 }
 
-func (r *RepoFavorite) GetDetailFavorite(id int) (*models.Favorite, error) {
+func (r *FavoriteRepo) GetDetailFavorite(id int) (*models.Favorite, error) {
 	query := `SELECT 
 							"f"."id", 
 							"u"."firstName" || ' ' || COALESCE("u"."lastName", '') AS "userName",
@@ -79,16 +91,7 @@ func (r *RepoFavorite) GetDetailFavorite(id int) (*models.Favorite, error) {
 	return nil, nil
 }
 
-func (r *RepoFavorite) DeleteFavorite(id int) error {
-	query := `DELETE FROM public.favorite WHERE id = :id`
-
-	_, err := r.DB.NamedExec(query, map[string]interface{}{
-		"id": id,
-	})
-	return err
-}
-
-func (r *RepoFavorite) UpdateFavorite(data *models.UpdateFavorite) (*models.UpdateFavorite, error) {
+func (r *FavoriteRepo) UpdateFavorite(id int, data *models.UpdateFavorite) (*models.UpdateFavorite, error) {
 	query := `
 		UPDATE public.favorite 
 		SET "productId" = :productId, "updatedAt" = now() 
@@ -114,4 +117,13 @@ func (r *RepoFavorite) UpdateFavorite(data *models.UpdateFavorite) (*models.Upda
 	}
 
 	return nil, sql.ErrNoRows
+}
+
+func (r *FavoriteRepo) DeleteFavorite(id int) error {
+	query := `DELETE FROM public.favorite WHERE id = :id`
+
+	_, err := r.DB.NamedExec(query, map[string]interface{}{
+		"id": id,
+	})
+	return err
 }

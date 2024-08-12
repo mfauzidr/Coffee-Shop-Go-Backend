@@ -9,43 +9,44 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type UserRepoInterface interface {
+	CreateUser(data *models.Users) (*models.Users, error)
+	GetAllUsers(query *models.UsersQuery) (*models.UsersRes, int, error)
+	GetDetailsUser(uuid string) (*models.Users, error)
+	UpdateUser(uuid string, data map[string]interface{}) (*models.Users, error)
+	DeleteUser(uuid string) (*models.Users, error)
+}
+
 type UsersRepo struct {
 	*sqlx.DB
 }
 
-func NewUsers(db *sqlx.DB) *UsersRepo {
+func NewUserRepository(db *sqlx.DB) *UsersRepo {
 	return &UsersRepo{db}
 }
 
-func (r *UsersRepo) CreateUser(data map[string]interface{}) ([]models.Users, error) {
-	var columns []string
-	var values []interface{}
-	var placeholders []string
+func (r *UsersRepo) CreateUser(data *models.Users) (*models.Users, error) {
+	query := `
+        INSERT INTO users (
+    			"firstName", 
+    			"email", 
+    			"password", 
+    			"role"
+				) VALUES (
+    			:firstName, 
+    			:email, 
+    			:password, 
+    			:role
+				)
+				RETURNING *;
+    		`
 
-	i := 1
-	for key, value := range data {
-		columns = append(columns, fmt.Sprintf(`"%s"`, key))
-		values = append(values, value)
-		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
-		i++
-	}
-
-	query := fmt.Sprintf(`
-        INSERT INTO public.users
-        (%s)
-        VALUES
-        (%s)
-        RETURNING *
-    `, strings.Join(columns, ", "), strings.Join(placeholders, ", "))
-
-	fmt.Println(query)
-
-	var users []models.Users
-	err := r.DB.Select(&users, query, values...)
+	var result models.Users
+	err := r.DB.QueryRowx(query, data).StructScan(&result)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+	return &result, nil
 }
 
 func (r *UsersRepo) GetAllUsers(query *models.UsersQuery) (*models.UsersRes, int, error) {

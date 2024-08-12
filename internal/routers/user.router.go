@@ -11,8 +11,8 @@ import (
 func user(g *gin.Engine, d *sqlx.DB) {
 	route := g.Group("/user")
 
-	repo := repository.NewUsers(d)
-	handler := handlers.NewUsers(repo)
+	var repo repository.UserRepoInterface = repository.NewUserRepository(d)
+	handler := handlers.NewUserRepository(repo)
 
 	route.GET("/", handler.GetUsers)
 	route.GET("/:uuid", handler.GetUsersDetail)

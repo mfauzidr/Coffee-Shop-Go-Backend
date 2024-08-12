@@ -11,7 +11,7 @@ import (
 func product(g *gin.Engine, d *sqlx.DB) {
 	route := g.Group("/product")
 
-	repo := repository.NewProduct(d)
+	var repo repository.ProductRepoInterface = repository.NewProductRepository(d)
 	handler := handlers.NewProduct(repo)
 
 	route.GET("/", handler.GetProducts)
