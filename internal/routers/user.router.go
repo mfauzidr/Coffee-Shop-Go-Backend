@@ -4,6 +4,7 @@ import (
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/handlers"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/middleware"
 	"github.com/mfauzidr/coffeeshop-go-backend/internal/repository"
+	"github.com/mfauzidr/coffeeshop-go-backend/pkg"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -13,7 +14,8 @@ func user(g *gin.Engine, d *sqlx.DB) {
 	route := g.Group("/user")
 
 	var repo repository.UserRepoInterface = repository.NewUserRepository(d)
-	handler := handlers.NewUserRepository(repo)
+	var cld pkg.Cloudinary = *pkg.NewCloudinaryUtil()
+	handler := handlers.NewUserRepository(repo, cld)
 
 	route.GET("/", middleware.AuthMiddleware("admin"), handler.GetUsers)
 	route.GET("/:uuid", middleware.AuthMiddleware("admin", "customer"), handler.GetUsersDetail)

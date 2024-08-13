@@ -47,7 +47,6 @@ func AuthMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		ctx.Set("userId", check.ID)
 		ctx.Set("userUuid", check.UUID)
 		ctx.Set("userRole", check.Role)
 		ctx.Next()

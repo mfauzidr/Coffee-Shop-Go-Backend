@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -32,20 +33,38 @@ func init() {
 
 type Users struct {
 	Id              int        `db:"id" json:"id,omitempty" valid:"-"`
-	UsersUuid       string     `db:"uuid" json:"uuid" valid:"-"`
+	UUID            string     `db:"uuid" json:"uuid" valid:"-"`
 	FirstName       *string    `db:"firstName" json:"firstName" form:"firstName" valid:"stringlength(2|256)~First Name minimal 2 karakter"`
 	LastName        *string    `db:"lastName" json:"lastName" form:"lastName" valid:"stringlength(2|256)~Last Name minimal 2 karakter"`
 	Gender          *string    `db:"gender" json:"gender" form:"gender" valid:"type(string)"`
 	Email           string     `db:"email" json:"email" form:"email" valid:"email"`
 	Password        string     `db:"password" json:"password,omitempty" form:"password" valid:"stringlength(6|256)~Password minimal 6 karakter"`
-	Image           *string    `db:"image" json:"image" form:"image" valid:"-"`
+	Image           *string    `db:"image" json:"image" valid:"-"`
 	Address         *string    `db:"address" json:"address" form:"address" valid:"-"`
 	PhoneNumber     *string    `db:"phoneNumber" json:"phoneNumber" form:"phoneNumber" valid:"numeric,optional"`
-	Birthday        *string    `db:"birthday" json:"birthday" form:"birthday" valid:"-"`
+	Birthday        *time.Time `db:"birthday" json:"birthday" form:"birthday" valid:"-"`
 	DeliveryAddress *string    `db:"deliveryAddress" json:"deliveryAddress" form:"deliveryAddress" valid:"-"`
 	Role            string     `db:"role" json:"role" form:"role" valid:"in(customer|admin|staff)"`
 	CreatedAt       *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
 	UpdatedAt       *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
+}
+
+func (u Users) MarshalJSON() ([]byte, error) {
+	type Alias Users
+	return json.Marshal(&struct {
+		*Alias
+		Birthday string `json:"birthday"`
+	}{
+		Birthday: formatDate(u.Birthday),
+		Alias:    (*Alias)(&u),
+	})
+}
+
+func formatDate(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format("2006-01-02")
 }
 
 type UsersRes []Users

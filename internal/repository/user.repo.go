@@ -13,7 +13,7 @@ type UserRepoInterface interface {
 	CreateUser(data *models.Users) (*models.Users, error)
 	GetAllUsers(query *models.UsersQuery) (*models.UsersRes, int, error)
 	GetDetailsUser(uuid string) (*models.Users, error)
-	UpdateUser(uuid string, data map[string]interface{}) (*models.Users, error)
+	UpdateUser(uuid string, data *models.Users) (*models.Users, error)
 	DeleteUser(uuid string) (*models.Users, error)
 }
 
@@ -27,17 +27,19 @@ func NewUserRepository(db *sqlx.DB) *UsersRepo {
 
 func (r *UsersRepo) CreateUser(data *models.Users) (*models.Users, error) {
 	query := `
-        INSERT INTO users (
+        INSERT INTO public.users (
     			"firstName",
 					"lastName", 
     			"email", 
+					"image",
     			"password", 
     			"role",
 					"gender"
 				) VALUES (
     			:firstName, 
 					:lastName,
-    			:email, 
+    			:email,
+					:image,
     			:password, 
     			:role,
 					:gender
@@ -145,37 +147,39 @@ func (r *UsersRepo) GetDetailsUser(uuid string) (*models.Users, error) {
 	return nil, nil
 }
 
-func (r *UsersRepo) UpdateUser(uuid string, data map[string]interface{}) (*models.Users, error) {
-	var setClauses []string
-	var values []interface{}
+func (r *UsersRepo) UpdateUser(uuid string, data *models.Users) (*models.Users, error) {
+	query := `
+		UPDATE public.users
+		SET
+    	"firstName" = COALESCE(NULLIF(:firstName, ''), "firstName"),
+    	"lastName" = COALESCE(NULLIF(:lastName, ''), "lastName"),
+    	"email" = COALESCE(NULLIF(:email, ''), "email"),
+    	"password" = COALESCE(NULLIF(:password, ''), "password"),
+    	"image" = COALESCE(NULLIF(:image, ''), "image"),
+    	"address" = COALESCE(NULLIF(:address, ''), "address"),
+    	"deliveryAddress" = COALESCE(NULLIF(:deliveryAddress, ''), "deliveryAddress"),
+    	"birthday" = COALESCE(:birthday, "birthday"),
+    	"role" = COALESCE(NULLIF(:role, ''), "role"),
+    	"gender" = COALESCE(NULLIF(:gender, ''), "gender"),
+    	"updatedAt" = now()
+		WHERE "uuid" = :uuid
+		RETURNING *;
+		`
 
-	values = append(values, uuid)
-
-	i := 2
-	for key, value := range data {
-		setClauses = append(setClauses, fmt.Sprintf(`"%s" = $%d`, key, i))
-		values = append(values, value)
-		i++
-	}
-
-	if len(setClauses) == 0 {
-		return nil, fmt.Errorf("no fields to update")
-	}
-
-	query := fmt.Sprintf(`
-        UPDATE public.users
-        SET %s, "updatedAt" = now()
-        WHERE "uuid" = $1
-        RETURNING *
-    `, strings.Join(setClauses, ", "))
-
-	fmt.Println(query)
-	fmt.Println(values)
+	data.UUID = uuid
 
 	var updatedUser models.Users
-	err := r.DB.QueryRowx(query, values...).StructScan(&updatedUser)
+	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
 		return nil, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.StructScan(&updatedUser)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &updatedUser, nil

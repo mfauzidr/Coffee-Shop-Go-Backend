@@ -10,10 +10,10 @@ import (
 )
 
 type ProductRepoInterface interface {
-	CreateProduct(data map[string]interface{}) ([]models.Product, error)
+	CreateProduct(data *models.Product) (*models.Product, error)
 	GetAllProduct(query *models.ProductQuery) (*models.Products, int, error)
 	GetDetailProduct(uuid string) (*models.Product, error)
-	UpdateProduct(uuid string, data map[string]interface{}) (*models.Product, error)
+	UpdateProduct(uuid string, data *models.Product) (*models.Product, error)
 	DeleteProduct(uuid string) (*models.Product, error)
 }
 
@@ -25,33 +25,39 @@ func NewProductRepository(db *sqlx.DB) *RepoProduct {
 	return &RepoProduct{db}
 }
 
-func (r *RepoProduct) CreateProduct(data map[string]interface{}) ([]models.Product, error) {
-	var columns []string
-	var values []interface{}
-	var placeholders []string
+func (r *RepoProduct) CreateProduct(data *models.Product) (*models.Product, error) {
+	query := `
+        INSERT INTO public.products (
+    			"name",
+					"description", 
+    			"price", 
+					"image",
+    			"category"
+				) VALUES (
+    			:name, 
+					:description,
+    			:price,
+					:image,
+    			:category
+				)
+				RETURNING *;
+    		`
 
-	i := 1
-	for key, value := range data {
-		columns = append(columns, fmt.Sprintf(`"%s"`, key))
-		values = append(values, value)
-		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
-		i++
-	}
-
-	query := fmt.Sprintf(`
-        INSERT INTO public.products
-        (%s)
-        VALUES
-        (%s)
-        RETURNING *
-    `, strings.Join(columns, ", "), strings.Join(placeholders, ", "))
-
-	var users []models.Product
-	err := r.DB.Select(&users, query, values...)
+	var result models.Product
+	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.StructScan(&result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &result, nil
 }
 
 func (r *RepoProduct) GetAllProduct(query *models.ProductQuery) (*models.Products, int, error) {
@@ -145,40 +151,35 @@ func (r *RepoProduct) GetDetailProduct(uuid string) (*models.Product, error) {
 	return nil, nil
 }
 
-func (r *RepoProduct) UpdateProduct(uuid string, data map[string]interface{}) (*models.Product, error) {
-	var setClauses []string
-	var values []interface{}
+func (r *RepoProduct) UpdateProduct(uuid string, data *models.Product) (*models.Product, error) {
+	query := `
+		UPDATE public.users
+		SET
+    	"name" = COALESCE(NULLIF(:name, ''), "name"),
+    	"description" = COALESCE(NULLIF(:description, ''), "description"),
+    	"category" = COALESCE(NULLIF(:category, ''), "category"),
+    	"price" = COALESCE(NULLIF(:price, ''), "price"),
+    	"image" = COALESCE(NULLIF(:image, ''), "image"),
+    	"updatedAt" = now()
+		WHERE "uuid" = :uuid
+		RETURNING *;
+		`
 
-	values = append(values, uuid)
-
-	i := 2
-	for key, value := range data {
-		setClauses = append(setClauses, fmt.Sprintf(`"%s" = $%d`, key, i))
-		values = append(values, value)
-		i++
-	}
-
-	if len(setClauses) == 0 {
-		return nil, fmt.Errorf("no fields to update")
-	}
-
-	query := fmt.Sprintf(`
-        UPDATE public.products
-        SET %s, "updatedAt" = now()
-        WHERE "uuid" = $1
-        RETURNING *
-    `, strings.Join(setClauses, ", "))
-
-	fmt.Println(query)
-	fmt.Println(values)
-
-	var updatedUser models.Product
-	err := r.DB.QueryRowx(query, values...).StructScan(&updatedUser)
+	var updatedProduct models.Product
+	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return &updatedUser, nil
+	if rows.Next() {
+		err := rows.StructScan(&updatedProduct)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &updatedProduct, nil
 }
 
 func (r *RepoProduct) DeleteProduct(uuid string) (*models.Product, error) {

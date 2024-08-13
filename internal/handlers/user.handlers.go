@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"reflect"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -16,10 +16,12 @@ import (
 
 type UserHandler struct {
 	repository.UserRepoInterface
+	pkg.Cloudinary
 }
 
-func NewUserRepository(r repository.UserRepoInterface) *UserHandler {
-	return &UserHandler{r}
+func NewUserRepository(r repository.UserRepoInterface, cld pkg.Cloudinary) *UserHandler {
+	return &UserHandler{r, cld}
+
 }
 
 func (h *UserHandler) InsertUsers(ctx *gin.Context) {
@@ -34,13 +36,37 @@ func (h *UserHandler) InsertUsers(ctx *gin.Context) {
 
 	_, err := govalidator.ValidateStruct(&users)
 	if err != nil {
-		response.BadRequest("create data failed", err.Error())
+		response.BadRequest("Create User failed", err.Error())
 		return
+	}
+
+	file, header, err := ctx.Request.FormFile("image")
+	if err == nil {
+		mimeType := header.Header.Get("Content-Type")
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			response.BadRequest("Create User failed, upload file failed, file is not supported", nil)
+			return
+		}
+
+		if header.Size > 2*1024*1024 {
+			response.BadRequest("Create User failed, upload file failed, file size exceeds 2 MB", nil)
+			return
+		}
+
+		randomNumber := rand.Int()
+		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		uploadResult, err := h.UploadFile(ctx, file, fileName)
+		if err != nil {
+			response.BadRequest("Create User failed, upload file failed", err.Error())
+			return
+		}
+		imageURL := uploadResult.SecureURL
+		users.Image = &imageURL
 	}
 
 	users.Password, err = pkg.HashPassword(users.Password)
 	if err != nil {
-		response.BadRequest("Register failed", err.Error())
+		response.BadRequest("Create User failed", err.Error())
 		return
 	}
 
@@ -137,7 +163,7 @@ func (h *UserHandler) GetUsersDetail(ctx *gin.Context) {
 
 func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 	response := pkg.NewResponse(ctx)
-	var input models.Users
+	input := models.Users{}
 
 	if err := ctx.ShouldBind(&input); err != nil {
 		response.BadRequest("Update user failed, invalid input", err.Error())
@@ -150,32 +176,36 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 		return
 	}
 
+	file, header, err := ctx.Request.FormFile("image")
+
+	if err == nil {
+		mimeType := header.Header.Get("Content-Type")
+		fmt.Println(mimeType)
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			response.BadRequest("Update User failed, upload file failed, file is not supported", nil)
+			return
+		}
+
+		if header.Size > 2*1024*1024 {
+			response.BadRequest("Update User failed, upload file failed, file size exceeds 2 MB", nil)
+			return
+		}
+
+		randomNumber := rand.Int()
+		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		uploadResult, err := h.UploadFile(ctx, file, fileName)
+		if err != nil {
+			response.BadRequest("Update User failed, upload file failed", err.Error())
+			return
+		}
+		imageURL := uploadResult.SecureURL
+		input.Image = &imageURL
+	}
+
 	input.Password, err = pkg.HashPassword(input.Password)
 	if err != nil {
 		response.BadRequest("Register failed", err.Error())
 		return
-	}
-
-	data := make(map[string]interface{})
-	val := reflect.ValueOf(input)
-	typ := val.Type()
-
-	for i := 0; i < val.NumField(); i++ {
-		fieldValue := val.Field(i)
-		fieldType := typ.Field(i)
-
-		dbTag := fieldType.Tag.Get("db")
-		if dbTag == "" {
-			dbTag = strings.ToLower(fieldType.Name)
-		}
-		if dbTag == "id" {
-			continue
-		}
-
-		if (fieldValue.Kind() == reflect.Ptr && !fieldValue.IsNil()) ||
-			(fieldValue.Kind() != reflect.Ptr && fieldValue.Interface() != "") {
-			data[dbTag] = fieldValue.Interface()
-		}
 	}
 
 	role, _ := ctx.Get("userRole")
@@ -192,7 +222,7 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 		uuid = ctx.Param("uuid")
 	}
 
-	updatedUser, err := h.UpdateUser(uuid, data)
+	updatedUser, err := h.UpdateUser(uuid, &input)
 	if err != nil {
 		response.BadRequest("Update user failed", err.Error())
 		return

@@ -36,6 +36,8 @@ func (h *AuthHandler) Register(ctx *gin.Context) {
 		return
 	}
 
+	body.Role = "customer"
+
 	result, err := h.RegisterUser(&body)
 	if err != nil {
 		response.BadRequest("Register failed", err.Error())
@@ -78,7 +80,7 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	jwt := pkg.NewJWT(result.UsersUuid, result.Email, result.Role, result.Id)
+	jwt := pkg.NewJWT(result.UUID, result.Email, result.Role, result.Id)
 	token, err := jwt.GenerateToken()
 	if err != nil {
 		response.Unauthorized("Failed generate token", err.Error())

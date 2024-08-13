@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -17,10 +17,11 @@ import (
 
 type HandlerProduct struct {
 	repository.ProductRepoInterface
+	pkg.Cloudinary
 }
 
-func NewProduct(r repository.ProductRepoInterface) *HandlerProduct {
-	return &HandlerProduct{r}
+func NewProduct(r repository.ProductRepoInterface, cld pkg.Cloudinary) *HandlerProduct {
+	return &HandlerProduct{r, cld}
 }
 
 func (h *HandlerProduct) InsertProducts(ctx *gin.Context) {
@@ -39,15 +40,31 @@ func (h *HandlerProduct) InsertProducts(ctx *gin.Context) {
 		return
 	}
 
-	productData := map[string]interface{}{
-		"name":        products.Name,
-		"description": products.Description,
-		"price":       products.Price,
-		"category":    products.Category,
-		"image":       products.Image,
+	file, header, err := ctx.Request.FormFile("image")
+	if err == nil {
+		mimeType := header.Header.Get("Content-Type")
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			response.BadRequest("Create User failed, upload file failed, file is not supported", nil)
+			return
+		}
+
+		if header.Size > 2*1024*1024 {
+			response.BadRequest("Create User failed, upload file failed, file size exceeds 2 MB", nil)
+			return
+		}
+
+		randomNumber := rand.Int()
+		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		uploadResult, err := h.UploadFile(ctx, file, fileName)
+		if err != nil {
+			response.BadRequest("Create User failed, upload file failed", err.Error())
+			return
+		}
+		imageURL := uploadResult.SecureURL
+		products.Image = &imageURL
 	}
 
-	results, err := h.CreateProduct(productData)
+	results, err := h.CreateProduct(&products)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			if strings.Contains(err.Error(), "unique_name") {
@@ -139,26 +156,30 @@ func (h *HandlerProduct) ProductsUpdate(ctx *gin.Context) {
 		return
 	}
 
-	data := make(map[string]interface{})
-	val := reflect.ValueOf(input)
-	typ := val.Type()
+	file, header, err := ctx.Request.FormFile("image")
 
-	for i := 0; i < val.NumField(); i++ {
-		fieldValue := val.Field(i)
-		fieldType := typ.Field(i)
-
-		dbTag := fieldType.Tag.Get("db")
-		if dbTag == "" {
-			dbTag = strings.ToLower(fieldType.Name)
-		}
-		if dbTag == "id" {
-			continue
+	if err == nil {
+		mimeType := header.Header.Get("Content-Type")
+		fmt.Println(mimeType)
+		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
+			response.BadRequest("Update User failed, upload file failed, file is not supported", nil)
+			return
 		}
 
-		if (fieldValue.Kind() == reflect.Ptr && !fieldValue.IsNil()) ||
-			(fieldValue.Kind() != reflect.Ptr && fieldValue.Interface() != "") {
-			data[dbTag] = fieldValue.Interface()
+		if header.Size > 2*1024*1024 {
+			response.BadRequest("Update User failed, upload file failed, file size exceeds 2 MB", nil)
+			return
 		}
+
+		randomNumber := rand.Int()
+		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		uploadResult, err := h.UploadFile(ctx, file, fileName)
+		if err != nil {
+			response.BadRequest("Update User failed, upload file failed", err.Error())
+			return
+		}
+		imageURL := uploadResult.SecureURL
+		input.Image = &imageURL
 	}
 
 	uuid := ctx.Param("uuid")
@@ -167,9 +188,7 @@ func (h *HandlerProduct) ProductsUpdate(ctx *gin.Context) {
 		return
 	}
 
-	fmt.Println(data)
-
-	updatedProduct, err := h.UpdateProduct(uuid, data)
+	updatedProduct, err := h.UpdateProduct(uuid, &input)
 	if err != nil {
 		response.BadRequest("Update product failed", err.Error())
 		return

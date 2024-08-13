@@ -26,7 +26,7 @@ func (r *AuthRepository) RegisterUser(data *models.Users) (*models.Users, error)
 				) VALUES (
     			:email, 
     			:password,
-					'customer'
+					:role
 				)
 				RETURNING "uuid", "email", "role";
     		`
