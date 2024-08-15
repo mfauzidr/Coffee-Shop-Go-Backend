@@ -121,8 +121,16 @@ func (h *HandlerProduct) GetProducts(ctx *gin.Context) {
 		Total:     total,
 		TotalPage: totalPages,
 		Page:      query.Page,
-		NextPage:  query.Page + 1,
-		PrevPage:  query.Page - 1,
+		NextPage:  0,
+		PrevPage:  0,
+	}
+
+	if query.Page+1 <= totalPages {
+		meta.NextPage = query.Page + 1
+	}
+
+	if query.Page > 1 {
+		meta.PrevPage = query.Page - 1
 	}
 
 	response.GetAllSuccess("Product retrieved successfully", data, meta)

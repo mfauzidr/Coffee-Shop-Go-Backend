@@ -87,5 +87,5 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	response.Created("login success", token)
+	response.Success("login success", token)
 }

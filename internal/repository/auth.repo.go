@@ -7,7 +7,7 @@ import (
 
 type AuthRepoInterface interface {
 	GetByEmail(email string) (*models.UsersRes, error)
-	RegisterUser(data *models.Users) (*models.Users, error)
+	RegisterUser(data *models.Users) (string, error)
 }
 
 type AuthRepository struct {
@@ -17,7 +17,7 @@ type AuthRepository struct {
 func NewAuthRepository(db *sqlx.DB) *AuthRepository {
 	return &AuthRepository{db}
 }
-func (r *AuthRepository) RegisterUser(data *models.Users) (*models.Users, error) {
+func (r *AuthRepository) RegisterUser(data *models.Users) (string, error) {
 	query := `
         INSERT INTO users (
     			"email", 
@@ -31,20 +31,13 @@ func (r *AuthRepository) RegisterUser(data *models.Users) (*models.Users, error)
 				RETURNING "uuid", "email", "role";
     		`
 
-	var result models.Users
 	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer rows.Close()
 
-	if rows.Next() {
-		err := rows.StructScan(&result)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &result, nil
+	return "Register user is success", nil
 }
 
 func (r *AuthRepository) GetByEmail(email string) (*models.UsersRes, error) {

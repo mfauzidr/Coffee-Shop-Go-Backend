@@ -29,7 +29,7 @@ type Product struct {
 	Description string     `db:"description" json:"description" form:"description" valid:"-"`
 	Price       int        `db:"price" json:"price" form:"price" valid:"int"`
 	Category    string     `db:"category" json:"category" form:"category" valid:"in(coffee|food|non-coffee)"`
-	Image       *string    `db:"image,omitempty" json:"image,omitempty" valid:"-"`
+	Image       *string    `db:"image" json:"image" valid:"-"`
 	CreatedAt   *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
 	UpdatedAt   *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
 }

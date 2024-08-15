@@ -153,17 +153,19 @@ func (r *RepoProduct) GetDetailProduct(uuid string) (*models.Product, error) {
 
 func (r *RepoProduct) UpdateProduct(uuid string, data *models.Product) (*models.Product, error) {
 	query := `
-		UPDATE public.users
+		UPDATE public.products
 		SET
     	"name" = COALESCE(NULLIF(:name, ''), "name"),
     	"description" = COALESCE(NULLIF(:description, ''), "description"),
     	"category" = COALESCE(NULLIF(:category, ''), "category"),
-    	"price" = COALESCE(NULLIF(:price, ''), "price"),
+    	"price" = COALESCE(:price, "price"),
     	"image" = COALESCE(NULLIF(:image, ''), "image"),
     	"updatedAt" = now()
 		WHERE "uuid" = :uuid
 		RETURNING *;
 		`
+
+	data.Uuid = uuid
 
 	var updatedProduct models.Product
 	rows, err := r.DB.NamedQuery(query, data)
