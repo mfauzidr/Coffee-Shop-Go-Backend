@@ -153,15 +153,15 @@ func (r *RepoProduct) GetDetailProduct(uuid string) (*models.Product, error) {
 
 func (r *RepoProduct) UpdateProduct(uuid string, data *models.Product) (*models.Product, error) {
 	query := `
-		UPDATE public.products
-		SET
-    	"name" = COALESCE(NULLIF(:name, ''), "name"),
-    	"description" = COALESCE(NULLIF(:description, ''), "description"),
-    	"category" = COALESCE(NULLIF(:category, ''), "category"),
-    	"price" = COALESCE(:price, "price"),
-    	"image" = COALESCE(NULLIF(:image, ''), "image"),
-    	"updatedAt" = now()
-		WHERE "uuid" = :uuid
+		UPDATE public.movies
+		SET title = COALESCE(NULLIF(:title, ''), title),
+			image = COALESCE(NULLIF(:image, ''), image),
+			director = COALESCE(NULLIF(:director, ''), director),
+			casts = COALESCE(NULLIF(:casts, ''), casts),
+			duration = COALESCE(NULLIF(:duration, ''), duration),
+			release_date = COALESCE(NULLIF(:release_date, ''), release_date),
+			synopsis = COALESCE(NULLIF(:synopsis, ''), synopsis)
+		WHERE id = :id;
 		RETURNING *;
 		`
 
