@@ -1,4 +1,4 @@
-# Coffee Shop Web
+# Coffee Shop Backend with Go Language
 
 Coffee Shop Web is a simple website for managing a coffee shop. This application makes it easier for users if they want to create a coffee shop business.
 
