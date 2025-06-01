@@ -21,7 +21,7 @@ This Coffee Shop website was built with the aim of making it easier for users to
 
 ### Features
 
-- CRUD User, Product, Favorite, Order
+- CRUD User, Product, Favorite(on developments), Order(on developments)
 - Authentication With JWT
 - Hash Password
 - Cloudinary
@@ -65,7 +65,6 @@ Run the following command to start the server:
 ```sh
 $ go run ./cmd/main.go
 ```
-
 
 ## Contact
 
