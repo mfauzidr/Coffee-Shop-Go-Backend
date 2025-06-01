@@ -19,17 +19,17 @@ func NewAuthRepository(db *sqlx.DB) *AuthRepository {
 }
 func (r *AuthRepository) RegisterUser(data *models.Users) (string, error) {
 	query := `
-        INSERT INTO users (
-    			"email", 
-    			"password",
-					"role"
-				) VALUES (
-    			:email, 
-    			:password,
-					:role
-				)
-				RETURNING "uuid", "email", "role";
-    		`
+    INSERT INTO users (
+    	"email", 
+    	"password",
+			"role"
+			) VALUES (
+    	:email, 
+    	:password,
+			:role
+			)
+		RETURNING "uuid", "email", "role";
+    `
 
 	rows, err := r.DB.NamedQuery(query, data)
 	if err != nil {

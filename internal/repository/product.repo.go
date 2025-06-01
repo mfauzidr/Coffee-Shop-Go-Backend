@@ -27,21 +27,19 @@ func NewProductRepository(db *sqlx.DB) *RepoProduct {
 
 func (r *RepoProduct) CreateProduct(data *models.Product) (*models.Product, error) {
 	query := `
-        INSERT INTO public.products (
-    			"name",
-					"description", 
-    			"price", 
-					"image",
-    			"category"
-				) VALUES (
-    			:name, 
-					:description,
-    			:price,
-					:image,
-    			:category
-				)
-				RETURNING *;
-    		`
+    INSERT INTO public.products (
+    	"name",
+			"description", 
+    	"price", 
+			"image"
+		) VALUES (
+    	:name, 
+			:description,
+    	:price,
+			:image
+		)
+		RETURNING *;
+    `
 
 	var result models.Product
 	rows, err := r.DB.NamedQuery(query, data)
@@ -153,15 +151,14 @@ func (r *RepoProduct) GetDetailProduct(uuid string) (*models.Product, error) {
 
 func (r *RepoProduct) UpdateProduct(uuid string, data *models.Product) (*models.Product, error) {
 	query := `
-		UPDATE public.movies
-		SET title = COALESCE(NULLIF(:title, ''), title),
-			image = COALESCE(NULLIF(:image, ''), image),
-			director = COALESCE(NULLIF(:director, ''), director),
-			casts = COALESCE(NULLIF(:casts, ''), casts),
-			duration = COALESCE(NULLIF(:duration, ''), duration),
-			release_date = COALESCE(NULLIF(:release_date, ''), release_date),
-			synopsis = COALESCE(NULLIF(:synopsis, ''), synopsis)
-		WHERE id = :id;
+		UPDATE public.products
+		SET
+    	"name" = COALESCE(NULLIF(:name, ''), "name"),
+    	"price" = COALESCE(:price, "price"),
+    	"description" = COALESCE(NULLIF(:description, ''), "description"),
+    	"image" = COALESCE(NULLIF(:image, ''), "image"),
+    	"updatedAt" = now()
+		WHERE "uuid" = :uuid
 		RETURNING *;
 		`
 

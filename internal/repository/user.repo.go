@@ -27,22 +27,18 @@ func NewUserRepository(db *sqlx.DB) *UsersRepo {
 
 func (r *UsersRepo) CreateUser(data *models.Users) (*models.Users, error) {
 	query := `
-        INSERT INTO public.users (
-    			"firstName",
-					"lastName", 
+    INSERT INTO public.users (
+    			"fullName",
     			"email", 
 					"image",
     			"password", 
-    			"role",
-					"gender"
+    			"role"
 				) VALUES (
-    			:firstName, 
-					:lastName,
+    			:fullName, 
     			:email,
 					:image,
     			:password, 
-    			:role,
-					:gender
+    			:role
 				)
 				RETURNING *;
     		`
@@ -72,7 +68,7 @@ func (r *UsersRepo) GetAllUsers(query *models.UsersQuery) (*models.UsersRes, int
 
 	if query.Search != nil {
 		searchTerm := "%" + *query.Search + "%"
-		whereClauses = append(whereClauses, fmt.Sprintf(`("firstName" ILIKE $%d OR "lastName" ILIKE $%d)`, len(values)+1, len(values)+2))
+		whereClauses = append(whereClauses, fmt.Sprintf(`("fullName" ILIKE $%d)`, len(values)+1))
 		values = append(values, searchTerm, searchTerm)
 	}
 
@@ -109,23 +105,19 @@ func (r *UsersRepo) GetAllUsers(query *models.UsersQuery) (*models.UsersRes, int
 }
 
 func (r *UsersRepo) GetDetailsUser(uuid string) (*models.Users, error) {
-	query := `SELECT
-							"uuid", 
-							"firstName", 
-    	        "lastName", 
-    	        "gender", 
-    	        "email",
-    	        "image", 
-    	        "address", 
-    	        "phoneNumber", 
-    	        "birthday",
-    	        "deliveryAddress", 
-    	        "role", 
-    	        "createdAt", 
-    	        "updatedAt" 
-						FROM 
-							public.users 
-						WHERE uuid = :uuid`
+	query := `
+		SELECT
+			"uuid", 
+			"fullName", 
+      "email",
+      "image", 
+      "address", 
+      "phoneNumber", 
+      "role", 
+      "createdAt", 
+      "updatedAt" 
+		FROM public.users 
+		WHERE uuid = :uuid`
 	data := models.Users{}
 
 	rows, err := r.DB.NamedQuery(query, map[string]interface{}{
@@ -151,16 +143,12 @@ func (r *UsersRepo) UpdateUser(uuid string, data *models.Users) (*models.Users, 
 	query := `
 		UPDATE public.users
 		SET
-    	"firstName" = COALESCE(NULLIF(:firstName, ''), "firstName"),
-    	"lastName" = COALESCE(NULLIF(:lastName, ''), "lastName"),
+    	"fullName" = COALESCE(NULLIF(:fullName, ''), "fullName"),
     	"email" = COALESCE(NULLIF(:email, ''), "email"),
     	"password" = COALESCE(NULLIF(:password, ''), "password"),
     	"image" = COALESCE(NULLIF(:image, ''), "image"),
     	"address" = COALESCE(NULLIF(:address, ''), "address"),
-    	"deliveryAddress" = COALESCE(NULLIF(:deliveryAddress, ''), "deliveryAddress"),
-    	"birthday" = COALESCE(:birthday, "birthday"),
     	"role" = COALESCE(NULLIF(:role, ''), "role"),
-    	"gender" = COALESCE(NULLIF(:gender, ''), "gender"),
     	"updatedAt" = now()
 		WHERE "uuid" = :uuid
 		RETURNING *;

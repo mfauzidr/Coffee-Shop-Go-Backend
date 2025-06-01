@@ -159,9 +159,16 @@ func (h *UserHandler) GetUsersDetail(ctx *gin.Context) {
 		uuid = ctx.Param("uuid")
 	}
 
+	fmt.Println("Fetching details for user UUID:", uuid)
+
 	data, err := h.GetDetailsUser(uuid)
 	if err != nil {
 		response.NotFound("User Not Found", err.Error())
+		return
+	}
+
+	if data == nil {
+		response.NotFound("User Not Found", nil)
 		return
 	}
 
@@ -177,52 +184,59 @@ func (h *UserHandler) UsersUpdate(ctx *gin.Context) {
 		return
 	}
 
-	_, err := govalidator.ValidateStruct(&input)
-	if err != nil {
-		response.BadRequest("Update user failed", err.Error())
+	// Validasi minimal
+	if input.Email != "" && !govalidator.IsEmail(input.Email) {
+		response.BadRequest("Invalid email format", nil)
+		return
+	}
+	if input.Password != "" && len(input.Password) < 6 {
+		response.BadRequest("Password minimal 6 karakter", nil)
+		return
+	}
+	if input.PhoneNumber != nil && *input.PhoneNumber != "" && !govalidator.IsNumeric(*input.PhoneNumber) {
+		response.BadRequest("Nomor telepon hanya boleh angka", nil)
 		return
 	}
 
+	// Upload file jika ada
 	file, header, err := ctx.Request.FormFile("image")
-
 	if err == nil {
 		mimeType := header.Header.Get("Content-Type")
-		fmt.Println(mimeType)
 		if mimeType != "image/jpg" && mimeType != "image/jpeg" && mimeType != "image/png" {
-			response.BadRequest("Update User failed, upload file failed, file is not supported", nil)
+			response.BadRequest("Upload failed: file type not supported", nil)
 			return
 		}
-
 		if header.Size > 2*1024*1024 {
-			response.BadRequest("Update User failed, upload file failed, file size exceeds 2 MB", nil)
+			response.BadRequest("Upload failed: file size exceeds 2MB", nil)
 			return
 		}
-
-		randomNumber := rand.Int()
-		fileName := fmt.Sprintf("user-image-%d", randomNumber)
+		fileName := fmt.Sprintf("user-image-%d", rand.Int())
 		uploadResult, err := h.UploadFile(ctx, file, fileName)
 		if err != nil {
-			response.BadRequest("Update User failed, upload file failed", err.Error())
+			response.BadRequest("Upload failed", err.Error())
 			return
 		}
-		imageURL := uploadResult.SecureURL
-		input.Image = &imageURL
+		input.Image = &uploadResult.SecureURL
 	}
 
-	input.Password, err = pkg.HashPassword(input.Password)
-	if err != nil {
-		response.BadRequest("Register failed", err.Error())
-		return
+	// Hash password jika diberikan
+	if input.Password != "" {
+		hashedPassword, err := pkg.HashPassword(input.Password)
+		if err != nil {
+			response.BadRequest("Hashing failed", err.Error())
+			return
+		}
+		input.Password = hashedPassword
 	}
 
-	role, _ := ctx.Get("userRole")
+	// UUID dari context atau param
 	var uuid string
-
+	role, _ := ctx.Get("userRole")
 	if role == "customer" {
 		if userUuid, ok := ctx.Get("userUuid"); ok {
 			uuid = userUuid.(string)
 		} else {
-			response.Unauthorized("User UUID not found", err)
+			response.Unauthorized("User UUID not found", nil)
 			return
 		}
 	} else {

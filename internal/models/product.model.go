@@ -23,15 +23,16 @@ func init() {
 }
 
 type Product struct {
-	Id          int        `db:"id" json:"id" valid:"-"`
-	Uuid        string     `db:"uuid" json:"uuid" valid:"-"`
-	Name        string     `db:"name" json:"name" form:"name" valid:"stringlength(4|256)~Product Name minimal 4 karakter"`
-	Description string     `db:"description" json:"description" form:"description" valid:"-"`
-	Price       int        `db:"price" json:"price" form:"price" valid:"int"`
-	Category    string     `db:"category" json:"category" form:"category" valid:"in(coffee|food|non-coffee)"`
-	Image       *string    `db:"image" json:"image" valid:"-"`
-	CreatedAt   *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
-	UpdatedAt   *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
+	Id            int        `db:"id" json:"id" valid:"-"`
+	Uuid          string     `db:"uuid" json:"uuid" valid:"-"`
+	Name          string     `db:"name" json:"name" form:"name" valid:"stringlength(4|256)~Product Name minimal 4 karakter"`
+	Description   string     `db:"description" json:"description" form:"description" valid:"-"`
+	Price         int        `db:"price" json:"price" form:"price" valid:"int"`
+	DiscountPrice *int       `db:"discountPrice" json:"discountPrice,omitempty" form:"discountPrice" valid:"int"`
+	IsRecommended *bool      `db:"isRecommended" json:"isRecommended,omitempty" form:"isRecommended" valid:"int"`
+	Image         *string    `db:"image" json:"image" valid:"-"`
+	CreatedAt     *time.Time `db:"createdAt" json:"createdAt" valid:"-"`
+	UpdatedAt     *time.Time `db:"updatedAt" json:"updatedAt,omitempty" valid:"-"`
 }
 
 type Products []Product
