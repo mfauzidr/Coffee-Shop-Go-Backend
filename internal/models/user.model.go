@@ -6,21 +6,18 @@ import (
 
 var schemaUsers = `
 CREATE TABLE public.users (
-	id serial4 NOT NULL,
-	"firstName" varchar(255) NOT NULL,
-	"lastName" varchar(255) NULL,
-	gender varchar(255) NULL,
-	email varchar(255) NOT NULL,
+	"id" serial4 NOT NULL,
+	"fullName" varchar(30) NOT NULL,
+	"email" varchar(30) NOT NULL,
 	"password" varchar(100) NOT NULL,
-	address varchar(255) NULL,
-	"deliveryAddress" varchar(255) NULL,
-	image varchar(255) NULL,
+	"address" text NULL,
+	"image" text NULL,
 	"phoneNumber" varchar(15) NULL,
 	"role" varchar(20) NULL,
-	"createdAt" timestamp NULL DEFAULT now(),
+	"createdAt" timestamp DEFAULT now() NULL,
 	"updatedAt" timestamp NULL,
-	uuid uuid NULL DEFAULT uuid_generate_v4(),
-	birthday date NULL DEFAULT '1990-01-01'::date,
+	"uuid" uuid DEFAULT uuid_generate_v4() NULL,
+	CONSTRAINT user_uuid_unique UNIQUE (uuid),
 	CONSTRAINT users_email_key UNIQUE (email),
 	CONSTRAINT users_pkey PRIMARY KEY (id)
 );

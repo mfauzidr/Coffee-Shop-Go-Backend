@@ -4,16 +4,18 @@ import "time"
 
 var schemaProduct = `
 CREATE TABLE public.products (
-	id serial4 NOT NULL,
-	name varchar(30) NOT NULL,
-	description text NOT NULL,
-	price int4 NOT NULL,
-	image text NULL,
-	"createdAt" timestamp NULL DEFAULT now(),
+	"id" serial4 NOT NULL,
+	"name" varchar(30) NOT NULL,
+	"description" text NOT NULL,
+	"price" int4 NOT NULL,
+	"image" text NULL,
+	"discountPrice" int4 NULL,
+	"isRecommended" bool NULL,
+	"createdAt" timestamp DEFAULT now() NULL,
 	"updatedAt" timestamp NULL,
-	uuid uuid NULL DEFAULT uuid_generate_v4(),
-	category varchar(50) NULL,
+	"uuid" uuid DEFAULT uuid_generate_v4() NULL,
 	CONSTRAINT products_pkey PRIMARY KEY (id),
+	CONSTRAINT products_uuid_unique UNIQUE (uuid),
 	CONSTRAINT unique_name UNIQUE (name)
 );
 `
